@@ -1,0 +1,7 @@
+alias num R0;
+num = 1;
+
+while(num <= 20) do
+    print num * num;
+    num = num + 1;
+endwhile;
