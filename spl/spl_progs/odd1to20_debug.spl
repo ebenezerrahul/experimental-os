@@ -1,0 +1,10 @@
+alias counter R0;
+counter = 1;
+while(counter <= 10) do
+    if(counter % 2 == 1) then
+        print counter;
+        breakpoint;
+    endif;
+    counter = counter + 1;
+endwhile;
+

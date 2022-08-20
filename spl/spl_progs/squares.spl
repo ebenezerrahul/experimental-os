@@ -2,6 +2,8 @@ alias num R0;
 num = 1;
 
 while(num <= 20) do
-    print num * num;
+    if(num % 2 == 1) then
+        print num * num;
+    endif;
     num = num + 1;
 endwhile;
