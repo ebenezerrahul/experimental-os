@@ -1,9 +1,20 @@
+//library code
 loadi(63,13);
 loadi(64,14);
+
+//init
 loadi(65,7);
 loadi(66,8);
+
+//timer interupt
+loadi(4,17);
+loadi(5,18);
+
+//int 10
 loadi(22,35);
 loadi(23,36);
+
+//execption_handler
 loadi(2,15);
 loadi(3,16);
 
@@ -54,6 +65,14 @@ endif;
 
 [76*512] = [65*512 + 1];
 SP = 8*512;
+
+//process table
+[PROCESS_TABLE + 11] = 80;
+[PROCESS_TABLE + 1] = 0;
+
+//SYSTEM_STATUS_TABLE
+[SYSTEM_STATUS_TABLE + 1] = 0;
+
 
 ireturn;
 
