@@ -1,0 +1,43 @@
+alias userSp R0;
+alias physicalPageNum R1;
+alias offset R2;
+alias fileDescPhysicalAddr R3;
+alias fileDescriptor R4;
+alias Syscall_num R5;
+alias physcalArrRetVal R7;
+alias word R8;
+userSp = SP;
+
+// retriving system call number
+physicalPageNum = [PTBR + 2 * ((userSp - 5)/ 512)];
+offset = (userSp - 5) % 512;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = [physicalPageNum * 512 + offset];
+R6 = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9];
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+//print "Syscall_num:";
+//print R6;
+
+if(R6 == 5) then
+    physicalPageNum = [PTBR + 2 * ((userSp - 4)/512)];
+    offset = (userSp - 4) % 512;
+    fileDescPhysicalAddr = (physicalPageNum * 512) + offset;
+    fileDescriptor = [fileDescPhysicalAddr];
+    //print "fileDes:";
+    //print fileDescriptor;
+    physcalArrRetVal = ([PTBR + 2 * ((userSp - 1)/512)] * 512) + ((userSp - 1) % 512);
+    if (fileDescriptor != -2) then
+        [physcalArrRetVal] = -1;
+    else 
+        word = [[PTBR + 2 *((userSp - 3)/512)] * 512 + ((userSp - 3) % 512)];
+        print word;
+        [physcalArrRetVal] = 0;
+    endif;
+endif;
+
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13];
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+ireturn;

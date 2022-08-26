@@ -6,6 +6,10 @@ loadi(64,14);
 loadi(65,7);
 loadi(66,8);
 
+//int_7
+loadi(16,29);
+loadi(17,30);
+
 //timer interupt
 loadi(4,17);
 loadi(5,18);
