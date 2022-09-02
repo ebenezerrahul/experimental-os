@@ -1,0 +1,6 @@
+MOV [SP],-4
+ADD SP,3
+POP R0
+POP R1
+BRKP
+RET
