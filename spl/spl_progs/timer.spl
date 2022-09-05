@@ -1,11 +1,42 @@
 //loading user stack pointer
+breakpoint;
 [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
 //loading sp with kernal stack pointer
-SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1; // [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16 ) + 12];
 backup;
-print "TIMER";
+
+alias currPID R0;
+alias currPrTableEntry R1;
+alias newPID R2;
+alias newPrTableEntry R3;
+currPID = [SYSTEM_STATUS_TABLE + 1];
+currPrTableEntry = PROCESS_TABLE + currPID * 16;
+[currPrTableEntry + 12] = SP % 512;
+[currPrTableEntry + 4] = READY;
+
+if(currPID == 1) then 
+    newPID = 0;
+else 
+    newPID = 1;
+endif;
+
+newPrTableEntry = PROCESS_TABLE + newPID * 16;
+PTBR = [newPrTableEntry + 14];
+PTLR = [newPrTableEntry + 15];
+SP = [newPrTableEntry + 12] + [newPrTableEntry + 11] * 512;
+[SYSTEM_STATUS_TABLE + 1] = newPID;
+
+
+if([newPrTableEntry + 4] == CREATED) then
+	[newPrTableEntry + 4] = RUNNING;
+	SP = [newPrTableEntry + 13];
+	breakpoint;
+	ireturn;
+endif;
+
+[newPrTableEntry + 4] = RUNNING;
 restore;
 SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13];
-
+breakpoint;
 ireturn;
 
