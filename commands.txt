@@ -1,0 +1,1 @@
+load --os ../spl/spl_progs/final_os_startup.spl
