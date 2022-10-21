@@ -3,13 +3,13 @@ alias curr_pid R2;
 
 if (function_num == ACQUIRE_TERMINAL) then
     while([TERMINAL_STATUS_TABLE] != 0) do 
-        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 4] = WAIT_TERMINAL;
-        multipush(R1,R2);
+        [PROCESS_TABLE + curr_pid * 16 + 4] = WAIT_TERMINAL;
+        multipush(R1,R2,R3);
         call SCHEDULER;
-        multipop(R1,R2);
+        multipop(R1,R2,R3);
     endwhile;
     [TERMINAL_STATUS_TABLE] = 1;
-    [TERMINAL_STATUS_TABLE + 1] = [SYSTEM_STATUS_TABLE + 1];
+    [TERMINAL_STATUS_TABLE + 1] = curr_pid;
     breakpoint;
     return;
 
@@ -17,13 +17,14 @@ endif;
 
 
 if(function_num == RELEASE_TERMINAL) then 
-    if([SYSTEM_STATUS_TABLE + 1] != [TERMINAL_STATUS_TABLE + 1]) then 
+    //print "in relase";
+    if(curr_pid != [TERMINAL_STATUS_TABLE + 1]) then 
        R0 = -1;
        return;
     endif;
 
     [TERMINAL_STATUS_TABLE] = 0;
-    alias curr R3;
+    alias curr R4;
 
     curr = 1;
     
@@ -34,6 +35,7 @@ if(function_num == RELEASE_TERMINAL) then
         curr = curr + 1;
     endwhile;
     R0 = 0;
+    //print "in RELEASE_TERMINAL";
     breakpoint;
     return;
 endif;

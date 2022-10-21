@@ -1,0 +1,19 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16  + 12];
+backup;
+
+alias reqpid R3;
+alias req_proc_entry R4;
+reqpid = [TERMINAL_STATUS_TABLE + 1];
+req_proc_entry = PROCESS_TABLE + reqpid * 16;
+[req_proc_entry + 8] = P0;
+
+multipush(R3,R4);
+R2 = reqpid;
+R1 = RELEASE_TERMINAL;
+call RESOURCE_MANAGER;
+multipop(R3,R4);
+
+restore;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13];
+ireturn;

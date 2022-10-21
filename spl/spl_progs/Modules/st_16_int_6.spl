@@ -1,0 +1,62 @@
+alias currPid R1;
+alias currProcEntry R2;
+alias userSp R0;
+alias fileDescp R3;
+alias currAddr R4;
+alias currPageNum R5;
+alias actualAddr R6;
+alias actualPageNum R7;
+alias wordAddr R8;
+
+currPid = [SYSTEM_STATUS_TABLE + 1];
+currProcEntry = PROCESS_TABLE + currPid * 16;
+[currProcEntry + 9] = INT_READ;
+
+userSp = SP;
+
+[currProcEntry + 13] = SP;
+
+SP = [currProcEntry + 11] * 512 + [currProcEntry + 12];
+
+currAddr = userSp - 4;
+currPageNum = currAddr / 512;
+
+// just to be sure
+//if(currPageNum >= PTLR) then*/
+    //*print "exception";*/
+//*endif;*/
+
+actualPageNum = [PTBR + currPageNum * 2];
+actualAddr = actualPageNum * 512 + currAddr % 512;
+
+fileDescp = [actualAddr];
+
+if(fileDescp != -1) then 
+    currAddr = userSp - 1;
+    currPageNum = currAddr / 512;
+    actualPageNum = [PTBR + currPageNum * 2];
+    actualAddr = actualPageNum * 512 + currAddr % 512;
+    [actualAddr] = -1;
+
+else
+    currAddr = userSp -3;
+    currPageNum = currAddr / 512;
+    actualPageNum = [PTBR + currPageNum * 2];
+    actualAddr = actualPageNum * 512 + currAddr % 512;
+    wordAddr = [actualAddr];
+    backup;
+    R2 = currPid;
+    R1 = TERMINAL_READ;
+    R3 = wordAddr;
+    call DEVICE_MANAGER;
+    restore;
+    currAddr = userSp -1;
+    currPageNum = currAddr / 512;
+    actualPageNum = [PTBR + currPageNum * 2];
+    actualAddr = actualPageNum * 512 + currAddr % 512;
+    [actualAddr] = 0;
+
+endif;
+[currProcEntry + 9] = 0;
+SP = [currProcEntry + 13];
+ireturn;

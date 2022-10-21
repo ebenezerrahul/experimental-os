@@ -1,0 +1,40 @@
+alias function_num R1;
+alias currPid R2;
+
+if(function_num == TERMINAL_WRITE) then
+    multipush(R1,R2,R3);
+    alias word R3;
+    R1 = ACQUIRE_TERMINAL;
+    R2 = [SYSTEM_STATUS_TABLE + 1];
+    R3 = word;
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3);
+    print word;
+    multipush(R1,R2,R3);
+    R1 = RELEASE_TERMINAL;
+    R2 = [SYSTEM_STATUS_TABLE + 1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3);
+
+endif;
+
+if(function_num == TERMINAL_READ) then
+    multipush(R1,R2,R3);
+    R1 = ACQUIRE_TERMINAL;
+    R2 = currPid;
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3);
+    read;
+    [PROCESS_TABLE + currPid * 16 + 4] = WAIT_TERMINAL;
+    multipush(R1,R2,R3);
+    call SCHEDULER;
+    multipop(R1,R2,R3);
+    alias wordAddr R3;
+    [[PTBR + (wordAddr / 512) * 2]*512 + (wordAddr) % 512] = [PROCESS_TABLE + currPid * 16 + 8];
+    //[wordAddr] = [PROCESS_TABLE + currPid * 16 + 8];
+    return;
+
+endif;
+
+
+return;
