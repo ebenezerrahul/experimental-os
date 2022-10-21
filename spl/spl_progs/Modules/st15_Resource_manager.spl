@@ -1,0 +1,39 @@
+alias function_num R1;
+alias curr_pid R2;
+
+if (function_num == ACQUIRE_TERMINAL) then
+    while([TERMINAL_STATUS_TABLE] != 0) do 
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 4] = WAIT_TERMINAL;
+        multipush(R1,R2);
+        call SCHEDULER;
+        multipop(R1,R2);
+    endwhile;
+    [TERMINAL_STATUS_TABLE] = 1;
+    [TERMINAL_STATUS_TABLE + 1] = [SYSTEM_STATUS_TABLE + 1];
+    breakpoint;
+    return;
+
+endif;
+
+
+if(function_num == RELEASE_TERMINAL) then 
+    if([SYSTEM_STATUS_TABLE + 1] != [TERMINAL_STATUS_TABLE + 1]) then 
+       R0 = -1;
+       return;
+    endif;
+
+    [TERMINAL_STATUS_TABLE] = 0;
+    alias curr R3;
+
+    curr = 1;
+    
+    while(curr < MAX_PROC_NUM) do 
+        if([PROCESS_TABLE + curr * 16 + 4] == WAIT_TERMINAL) then
+            [PROCESS_TABLE + curr * 16 + 4] = READY;
+        endif;
+        curr = curr + 1;
+    endwhile;
+    R0 = 0;
+    breakpoint;
+    return;
+endif;
