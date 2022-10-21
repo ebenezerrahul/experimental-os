@@ -8,9 +8,6 @@ currPID = [SYSTEM_STATUS_TABLE + 1];
 multipush(BP);
 currPrTableEntry = PROCESS_TABLE + currPID * 16;
 [currPrTableEntry + 12] = SP % 512;
-if([currPrTableEntry + 4] != TERMINATED) then
-    [currPrTableEntry + 4] = READY;
-endif;
 
 newPID = currPID + 1;
 
@@ -34,6 +31,7 @@ PTLR = [newPrTableEntry + 15];
 if([newPrTableEntry + 4] == CREATED) then
     [newPrTableEntry + 4] = RUNNING;
     [SYSTEM_STATUS_TABLE + 1] = newPID;
+    [newPrTableEntry + 9] = 0;
     SP = [newPrTableEntry + 13];
     ireturn;
 endif;
