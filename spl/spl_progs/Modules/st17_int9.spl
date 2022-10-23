@@ -115,6 +115,7 @@ while(curr < 4) do
     curr = curr + 1;
 endwhile;
 
+[curr_proc_entry + 9] = 0;
 userSp = [PTBR + 16];
 [userSp * 512] = [[PTBR + 8] * 512 + 1];
 SP = 8 * 512;
