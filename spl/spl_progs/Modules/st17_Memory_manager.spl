@@ -1,0 +1,48 @@
+breakpoint;
+alias func_num R1;
+
+
+if (func_num == GET_FREE_PAGE) then 
+   [SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] + 1; 
+   while([SYSTEM_STATUS_TABLE + 2] == 0) do
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] *16 + 4] = WAIT_MEM;
+        backup;
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] *16 + 12] = SP % 512;
+        call SCHEDULER;
+        restore;
+   endwhile;
+   
+   [SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3]  - 1;
+   [SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2]  - 1;
+   alias curr R4;
+   alias found R5;
+   curr = 0;
+   found = -1;
+   while(curr < NUM_MEM_PAGES) do 
+        if([MEMORY_FREE_LIST + curr] == 0) then 
+            found = curr;
+            [MEMORY_FREE_LIST + curr] = 1;
+            break;
+        endif;
+        curr = curr + 1;
+   endwhile;
+   R0 = found;
+endif;
+
+if (func_num == RELEASE_PAGE) then 
+    alias pageNum R2;
+    [MEMORY_FREE_LIST + pageNum] =[MEMORY_FREE_LIST + pageNum] - 1;
+    if([MEMORY_FREE_LIST + pageNum] == 0) then 
+        [SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] + 1;
+        alias curr R4;
+        curr = 0;
+        while(curr < MAX_PROC_NUM) do 
+            if([PROCESS_TABLE + curr * 16 + 4] == WAIT_MEM) then
+                [PROCESS_TABLE + curr * 16 + 4] = READY; 
+            endif;
+            curr = curr + 1;
+        endwhile;
+    endif;
+endif;
+breakpoint;
+return;

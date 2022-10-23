@@ -1,0 +1,12 @@
+int main() {
+    decl 
+        string pgName;
+        int temp;
+    enddecl
+    begin
+        temp = exposcall("Read", -1, pgName);
+        temp = exposcall("Exec", pgName);
+        temp = exposcall("Write", -2, temp);
+        return 0;
+    end
+}
