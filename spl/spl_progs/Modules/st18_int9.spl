@@ -1,0 +1,137 @@
+alias curr_pid R4;
+alias curr_proc_entry R5;
+alias userSp R6;
+alias virPgNo R7;
+alias physicalPageNum R8;
+alias physicalAddr R9;
+alias fileName R10;
+alias curr R11;
+alias found R12;
+alias userPgArea R13;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+userSp = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 12];
+curr_pid = [SYSTEM_STATUS_TABLE + 1];
+curr_proc_entry = PROCESS_TABLE + curr_pid * 16;
+[curr_proc_entry + 9] = INT_EXEC;
+
+virPgNo = (userSp - 4) / 512;
+physicalPageNum = [PTBR + virPgNo * 2];
+physicalAddr = physicalPageNum * 512 + (userSp - 4) / 512;
+fileName = [physicalAddr];
+
+curr = 0;
+
+found = -1;
+while(curr < DISK_SIZE) do 
+    if ([INODE_TABLE + curr * 16 + 1] == fileName) then 
+        found = curr;
+        break;
+    endif;
+    curr = curr + 1;
+endwhile;
+
+
+if(found == - 1 || [INODE_TABLE + 16 * found] != EXEC) then
+    virPgNo = (userSp - 1) / 512;
+    physicalPageNum = [PTBR + virPgNo * 2];
+    physicalAddr = physicalPageNum * 512 + (userSp - 1) % 512;
+    [physicalAddr] = -1;
+    SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13];
+    ireturn;
+endif;
+
+userPgArea = [curr_proc_entry + 11];
+
+
+backup;
+    R1 = EXIT_PROCESS;
+    R2 = curr_pid;
+    call PROCESS_MANAGER;
+restore;
+
+
+[MEMORY_FREE_LIST + userPgArea] = [MEMORY_FREE_LIST + userPgArea] + 1;
+[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;
+SP = userPgArea * 512;
+[curr_proc_entry + 4] = RUNNING; 
+[curr_proc_entry + 7] = found;
+
+//initiating per process table
+curr = 0;
+while(curr < 8) do
+    [userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2] = -1;
+    curr = curr + 1;
+endwhile;
+
+
+//library
+[PTBR + 0] = 63;
+[PTBR + 1] = "0100";
+[PTBR + 2] = 64;
+[PTBR + 3] = "0100";
+
+backup;
+R1 = GET_FREE_PAGE;
+call MEMORY_MANAGER;
+[PTBR + 4] = R0;
+[PTBR + 5] = "0110";
+
+R1 = GET_FREE_PAGE;
+call MEMORY_MANAGER;
+[PTBR + 6] = R0;
+[PTBR + 7] = "0110";
+
+R1 = GET_FREE_PAGE;
+call MEMORY_MANAGER;
+[PTBR + 16] = R0;
+[PTBR + 17] = "0110";
+
+R1 = GET_FREE_PAGE;
+call MEMORY_MANAGER;
+[PTBR + 18] = R0;
+[PTBR + 19] = "0110";
+
+restore;
+
+
+curr = 0;
+while(curr < 4) do 
+    R0 = -1;
+    if ([INODE_TABLE + found * 16 + curr + 8] != -1) then 
+        backup;
+        R1 = GET_FREE_PAGE;
+        call MEMORY_MANAGER;
+        [PTBR + 8 + curr * 2] = R0;
+        restore;
+    else 
+        [PTBR + 8 + curr * 2] = -1;
+    endif;
+    [PTBR + 8  + curr * 2 + 1] = "0100";
+    if([PTBR + 8 + curr *2] == -1) then
+        [PTBR + 8 + curr * 2 + 1] = "0000";
+    endif;
+    curr = curr + 1;
+endwhile;
+
+curr = 0;
+while(curr < 4) do 
+    if ([PTBR + 8 + curr * 2] != -1) then
+        backup;
+        R1 = DISK_LOAD;
+        R2 = curr_pid;
+        R3 = [PTBR + curr * 2 + 8];
+        R4 = [INODE_TABLE + found * 16 + 8 + curr];
+        call DEVICE_MANAGER;
+        restore;
+    endif;
+    curr = curr + 1;
+endwhile;
+
+[curr_proc_entry + 9] = 0;
+userSp = [PTBR + 16];
+[userSp * 512] = [[PTBR + 8] * 512 + 1];
+SP = 8 * 512;
+breakpoint;
+ireturn;
