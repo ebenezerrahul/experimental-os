@@ -1,0 +1,88 @@
+alias func_num R1;
+
+if(func_num == GET_CODE_PAGE) then 
+    alias block_num R2;
+    alias curr R3;
+    curr  = 0;
+    while(curr  < 10 * MAX_PROC_NUM) do
+        if (block_num == [DISK_MAP_TABLE + curr] && curr % 10 >= 4 && curr % 10 < 8 && [PAGE_TABLE_BASE + (curr/10) * 20 + (curr%10 - 4)*2 + 8] != -1) then
+            alias pageNum R4;
+            pageNum = [PAGE_TABLE_BASE + (curr / 10) * 20 + (curr%10 - 4) * 2 + 8];
+            [MEMORY_FREE_LIST + pageNum] = [MEMORY_FREE_LIST + pageNum] + 1;
+            R0 = pageNum;
+            return;
+        endif;
+        curr  = curr + 1;
+    endwhile;
+    multipush(R1,R2,R3,R4);
+    R1 = GET_FREE_PAGE;
+    call MEMORY_MANAGER;
+    multipop(R1,R2,R3,R4);
+    
+    alias free_page R5;
+    free_page = R0;
+    multipush(R1,R2,R3,R4,R5);
+    R4 = block_num;
+    R3 = free_page;
+    R2 = [SYSTEM_STATUS_TABLE + 1];
+    R1 = DISK_LOAD;
+    call DEVICE_MANAGER;
+    multipop(R1,R2,R3,R4,R5);
+    R0 = free_page;
+    return;
+endif;
+
+
+if (func_num == GET_FREE_PAGE) then 
+   [SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] + 1; 
+   while([SYSTEM_STATUS_TABLE + 2] == 0) do
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] *16 + 4] = WAIT_MEM;
+        backup;
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] *16 + 12] = SP % 512;
+        call SCHEDULER;
+        restore;
+   endwhile;
+   
+   [SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3]  - 1;
+   [SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2]  - 1;
+   alias curr R4;
+   alias found R5;
+   curr = 0;
+   found = -1;
+   while(curr < NUM_MEM_PAGES) do 
+        if([MEMORY_FREE_LIST + curr] == 0) then 
+            found = curr;
+            [MEMORY_FREE_LIST + curr] = 1;
+            break;
+        endif;
+        curr = curr + 1;
+   endwhile;
+   R0 = found;
+   return;
+endif;
+
+if(func_num == RELEASE_BLOCK) then
+    alias block_num R2;
+    alias curr_pid R3;
+    [DISK_FREE_LIST + block_num] = [DISK_FREE_LIST + block_num] - 1;
+    return;
+endif;
+
+
+if (func_num == RELEASE_PAGE) then 
+    alias pageNum R2;
+    [MEMORY_FREE_LIST + pageNum] =[MEMORY_FREE_LIST + pageNum] - 1;
+    if([MEMORY_FREE_LIST + pageNum] == 0) then 
+        [SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] + 1;
+        alias curr R4;
+        curr = 0;
+        while(curr < MAX_PROC_NUM) do 
+            if([PROCESS_TABLE + curr * 16 + 4] == WAIT_MEM) then
+                [PROCESS_TABLE + curr * 16 + 4] = READY; 
+            endif;
+            curr = curr + 1;
+        endwhile;
+    endif;
+    return;
+endif;
+return;

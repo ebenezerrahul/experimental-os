@@ -1,0 +1,72 @@
+alias func_num R1;
+
+if(func_num == FREE_USER_AREA_PAGE) then 
+    alias curr_pid R2;
+    multipush(R1,R2,R3,R4);
+    R1 = RELEASE_PAGE;
+    R2 = [PROCESS_TABLE + curr_pid * 16 + 11];
+    call MEMORY_MANAGER;
+    multipop(R1,R2,R3,R4);
+    return;
+endif;
+
+if(func_num == EXIT_PROCESS) then 
+    alias curr_pid R2;
+    multipush(R1,R2,R3,R4);
+    R1 = FREE_PAGE_TABLE;
+    R2 = curr_pid;
+    call PROCESS_MANAGER;
+    multipop(R1,R2,R3,R4);
+
+    multipush(R1,R2,R3,R4);
+    R1 = FREE_USER_AREA_PAGE;
+    R2 = curr_pid;
+    call PROCESS_MANAGER;
+    multipop(R1,R2,R3,R4);
+    [PROCESS_TABLE + curr_pid * 16 + 4] = TERMINATED;
+
+    return;
+endif;
+
+if (func_num == FREE_PAGE_TABLE) then 
+    [PTBR + 0] = -1;
+    [PTBR + 1] = "0000";
+    [PTBR + 2] = -1;
+    [PTBR + 3] = "0000";
+    alias curr R4;
+    alias curr_pid R2;
+    curr = 2;
+    while(curr < 10) do 
+            if ([PTBR + curr *2] != -1) then 
+                multipush(R1,R2,R3,R4);
+                R1 = RELEASE_PAGE;
+                R2 = [PTBR + curr *2];
+                call MEMORY_MANAGER;
+                multipop(R1,R2,R3,R4);
+            endif;
+            [PTBR + curr *2 + 1] = "0000";
+            curr = curr + 1;
+    endwhile;
+
+    curr = 0;
+    while(curr < 10) do 
+
+        if(((curr >= 2 && curr < 4) || curr >= 8 ) && [DISK_MAP_TABLE + curr_pid * 10 + curr] != -1) then
+
+            multipush(R1,R2,R3,R4,R5);
+
+            R3 = curr_pid;
+            R2 = [DISK_MAP_TABLE + curr_pid * 10 + curr];
+            R1 = RELEASE_BLOCK;
+            call MEMORY_MANAGER;
+
+            multipop(R1,R2,R3,R4,R5);
+
+        endif;
+        
+        [DISK_MAP_TABLE + curr_pid * 10 + curr] = -1;
+        curr = curr + 1;
+        
+    endwhile;
+    return;
+endif;

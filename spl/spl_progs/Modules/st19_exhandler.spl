@@ -1,0 +1,93 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = -1;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 12];
+
+backup;
+multipush(EIP);
+breakpoint;
+alias userSP R5;
+alias curr_pid R6;
+alias curr_proc_entry R7;
+alias block_num R8;
+
+curr_pid = [SYSTEM_STATUS_TABLE + 1];
+curr_proc_entry = PROCESS_TABLE + curr_pid * 16;
+userSP = [curr_proc_entry + 13];
+
+if(EC != 0 || userSP >= PTLR * 512 - 1) then  
+    if(userSP >= PTLR * 5125 - 1) then
+        print "user stack";
+        print "is full";
+    endif;
+   
+    if(EC == 1) then
+        print "illegal";
+        print "instruction";
+        print [EIP];
+        print [EIP + 1];
+    endif;
+
+    if(EC == 2) then 
+        print "illegal";
+        print "memory";
+        print "access";
+        print EPN;
+    endif;
+
+    if(EC == 3) then
+        print "page fault";
+    endif;
+
+    print "terminating";
+    print "process_id :";
+    print curr_pid;
+
+    backup;
+    R1 = EXIT_PROCESS;
+    R2 = curr_pid;
+    call PROCESS_MANAGER;
+    restore;
+    
+    call SCHEDULER;
+
+endif;
+
+if (EPN >=4 && EPN < 8) then
+    block_num = [DISK_MAP_TABLE + curr_pid * 10 + EPN];
+    backup;
+    multipush(EPN);
+    R1 = GET_CODE_PAGE;
+    R2 = block_num;
+    call MEMORY_MANAGER;
+    multipop(EPN);
+    [PTBR + EPN*2] = R0;
+    [PTBR + EPN*2 + 1] = "1100"; 
+    restore;
+endif;
+
+if(EPN >= 2 && EPN < 4) then
+    backup;
+
+    R1 = GET_FREE_PAGE;
+    call MEMORY_MANAGER;
+    [PTBR + 4] = R0;
+    [PTBR + 5] = "1110";
+
+    R1 = GET_FREE_PAGE;
+    call MEMORY_MANAGER;
+    [PTBR + 6] = R0;
+    [PTBR + 7] = "1110";
+    
+    restore;
+endif;
+
+[curr_proc_entry + 9] = 0;
+
+userSP = userSP + 1;
+multipop(EIP);
+[[PTBR + (userSP / 512) * 2] * 512 + (userSP % 512)] = EIP;
+
+[curr_proc_entry + 13] = userSP;
+restore;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13];
+ireturn;

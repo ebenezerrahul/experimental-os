@@ -1,0 +1,44 @@
+type
+
+linkedlist {
+    int data;
+    linkedlist next;
+}
+
+endtype
+
+
+int main() {
+    decl
+        linkedlist head, curr , new;
+        int inp, temp, n, i, a;
+    enddecl
+    begin
+        temp = initialize();
+        read(n);
+        i = 0;
+        while(i < n) do
+            read(a);
+            if(i == 0) then
+                head = alloc();
+                curr = head;
+            endif;
+            if(i != 0) then
+                curr.next = alloc();
+                curr = curr.next;
+            endif;
+
+            curr.data = a;
+            i = i + 1;
+
+        endwhile;
+        curr = head;
+        i = 0;
+        while (i < n) do
+            write(curr.data);
+            curr = curr.next;
+            i = i + 1;
+        endwhile;
+        return 0;
+    end
+}
