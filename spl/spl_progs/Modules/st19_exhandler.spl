@@ -54,6 +54,18 @@ endif;
 
 if (EPN >=4 && EPN < 8) then
     block_num = [DISK_MAP_TABLE + curr_pid * 10 + EPN];
+
+    if(block_num == -1) then 
+        
+        backup;
+        R1 = EXIT_PROCESS;
+        R2 = curr_pid;
+        call PROCESS_MANAGER;
+        restore;
+        call SCHEDULER;
+     
+    endif;
+    
     backup;
     multipush(EPN);
     R1 = GET_CODE_PAGE;
