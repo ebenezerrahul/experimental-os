@@ -1,0 +1,44 @@
+alias currPID R0;
+alias currPrTableEntry R1;
+alias newPID R2;
+alias newPrTableEntry R3;
+
+
+currPID = [SYSTEM_STATUS_TABLE + 1];
+multipush(BP);
+currPrTableEntry = PROCESS_TABLE + currPID * 16;
+[currPrTableEntry + 12] = SP % 512;
+
+newPID = currPID + 1;
+
+while(newPID < MAX_PROC_NUM) do
+    newPrTableEntry = PROCESS_TABLE + newPID * 16;
+    if(([newPrTableEntry + 4] == READY) || ([newPrTableEntry + 4] == CREATED)) then
+        break;
+    endif;
+    newPID = newPID + 1;
+
+endwhile;
+if(newPID == MAX_PROC_NUM) then
+    newPID = 0;    
+    newPrTableEntry = newPID * 16 + PROCESS_TABLE;
+endif;
+
+SP = [newPrTableEntry + 12] + [newPrTableEntry + 11] * 512;
+PTBR = [newPrTableEntry + 14];
+PTLR = [newPrTableEntry + 15];
+
+if([newPrTableEntry + 4] == CREATED) then
+    BP = [[newPrTableEntry + 11] * 512 + [newPrTableEntry + 12]];
+    [newPrTableEntry + 4] = RUNNING;
+    [SYSTEM_STATUS_TABLE + 1] = newPID;
+    [newPrTableEntry + 9] = 0;
+    SP = [newPrTableEntry + 13];
+    ireturn;
+endif;
+
+[newPrTableEntry + 4] = RUNNING;
+[SYSTEM_STATUS_TABLE + 1] = newPID;
+multipop(BP);
+return;
+

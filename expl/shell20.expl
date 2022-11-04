@@ -1,0 +1,31 @@
+int main() {
+    decl
+        string filename1, filename2;
+        int temp, cpid;
+    enddecl
+    begin
+        write("ENTER F1 = ");
+        read(filename1);
+
+        write("ENTER F2 = ");
+        read(filename2);
+        
+        write(filename1);
+        write(filename2);
+        
+        cpid = exposcall("Fork");
+        
+        write("cpid is");
+        write(cpid);
+        
+        if(cpid == 0) then
+            write("I'm child");
+            temp = exposcall("Exec", filename1);
+            write("ERROR");
+        endif;
+        temp = exposcall("Exec", filename2);
+        write("ERROR");
+        return 0;
+
+    end
+}

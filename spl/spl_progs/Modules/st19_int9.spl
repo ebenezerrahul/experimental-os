@@ -18,20 +18,19 @@ curr_proc_entry = PROCESS_TABLE + curr_pid * 16;
 
 virPgNo = (userSp - 4) / 512;
 physicalPageNum = [PTBR + virPgNo * 2];
-physicalAddr = physicalPageNum * 512 + (userSp - 4) / 512;
+physicalAddr = physicalPageNum * 512 + (userSp - 4) % 512;
 fileName = [physicalAddr];
 
 curr = 0;
 
 found = -1;
-while(curr < DISK_SIZE) do 
+while(curr < MAX_FILE_NUM) do 
     if ([INODE_TABLE + curr * 16 + 1] == fileName) then 
         found = curr;
         break;
     endif;
     curr = curr + 1;
 endwhile;
-
 
 if(found == - 1 || [INODE_TABLE + 16 * found] != EXEC) then
     virPgNo = (userSp - 1) / 512;
