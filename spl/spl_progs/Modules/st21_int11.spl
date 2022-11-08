@@ -1,0 +1,70 @@
+alias sys_call R15;
+alias userSp R14;
+alias pid R13;
+alias p_pid R12;
+alias proccess_entry R11;
+alias pid_wait R10;
+alias ret_val R9;
+alias curr R8;
+breakpoint;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+[proccess_entry + 13] = SP;
+userSp = [proccess_entry + 13];
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+sys_call = [[PTBR + 2 * ((userSp - 5)/ 512)] * 512 + (userSp - 5) % 512];
+if(sys_call == 13) then // Wait 
+    pid_wait = [[PTBR + 2 * ((userSp - 4)/ 512)] * 512 + (userSp - 4) % 512];
+    [proccess_entry + 9] = 13; // wait mode;
+    if(pid_wait == pid || pid_wait >= 16 || pid_wait < 0 || [PROCESS_TABLE + pid_wait * 16 + 4] == TERMINATED) then 
+        ret_val = -1;
+    else 
+        [proccess_entry + 4] = WAIT_PROCESS;
+        [proccess_entry + 5] = pid_wait;
+        backup;
+        call SCHEDULER;
+        restore;
+        ret_val = 0;
+    endif;
+    [proccess_entry + 9] = 0; 
+    [[PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512] = ret_val;
+    SP = [proccess_entry + 13];
+    ireturn;
+endif;
+
+if(sys_call == 14) then // Signal
+    [proccess_entry + 9] = 14; // signal Mode
+    curr = PROCESS_TABLE;
+    while(curr < MAX_PROC_NUM*16 + PROCESS_TABLE) do
+        if([curr + 4] == WAIT_PROCESS && [curr + 5] == pid) then
+            [curr + 4] = READY;
+            [curr + 5] = "";
+        endif;
+        curr = curr + 16;
+    endwhile;
+    [proccess_entry + 9] = 0; 
+    ret_val = 0;
+    [[PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512] = ret_val;
+    SP = [proccess_entry + 13];
+    ireturn;
+endif;
+
+if(sys_call == 11) then // Getppid
+    [proccess_entry + 9] = 11; // signal Mode
+    ret_val = pid;
+    [proccess_entry + 9] = 0; 
+    [[PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512] = ret_val;
+    SP = [proccess_entry + 13];
+    ireturn;
+endif;
+
+if(sys_call == 12) then // Getppid
+    [proccess_entry + 9] = 11; // signal Mode
+    ret_val = [proccess_entry + 2];
+    [proccess_entry + 9] = 0; 
+    [[PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512] = ret_val;
+    SP = [proccess_entry + 13];
+    ireturn;
+endif;

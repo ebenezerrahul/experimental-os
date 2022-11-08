@@ -1,0 +1,17 @@
+int main(){
+    decl
+        int rt, i, temp;
+    enddecl
+    begin
+        i = 0;
+        while(i < 3) do
+            rt = exposcall("Fork");
+            if(rt == 0) then
+                temp = exposcall("Exec", "getpid.xsm");
+            endif;
+            i = i + 1;
+        endwhile;
+        return 0;
+    end
+
+}

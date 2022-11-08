@@ -14,7 +14,6 @@ endif;
 
 
 if(function_num == RELEASE_TERMINAL) then 
-    //print "in relase";
     if(curr_pid != [TERMINAL_STATUS_TABLE + 1]) then 
        R0 = -1;
        return;
@@ -32,7 +31,6 @@ if(function_num == RELEASE_TERMINAL) then
         curr = curr + 1;
     endwhile;
     R0 = 0;
-    //print "in RELEASE_TERMINAL";
 endif;
 
 if (function_num == ACQUIRE_DISK) then 

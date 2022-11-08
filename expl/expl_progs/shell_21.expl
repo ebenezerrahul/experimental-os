@@ -1,0 +1,43 @@
+decl
+    int fork();
+enddecl
+
+int fork() {
+    decl 
+        int retVal;
+    enddecl
+    begin
+        retVal = exposcall("Fork");
+        return retVal;
+    end
+}
+
+
+int main(){
+    decl
+        int rt, temp, waitst;
+        string command;
+    enddecl
+    begin
+        command = "";
+        while(command != "shutdown") do 
+            read(command);
+            if(command == "shutdown") then
+                break;
+            endif;
+            rt = fork();
+            if(rt == 0) then 
+                rt = exposcall("Exec", command);
+                write(command);
+                write("cmd not found");
+                break;
+            else
+                waitst = exposcall("Wait", rt);
+            endif;
+        endwhile;
+        if(command == "shutdown") then 
+            rt = exposcall("Shutdown");
+        endif;
+        return 0;
+    end
+}
