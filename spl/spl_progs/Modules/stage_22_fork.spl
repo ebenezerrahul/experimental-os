@@ -1,0 +1,166 @@
+//fork 
+alias userSp R15;
+alias p_pid R14;
+alias c_pid R13;
+alias p_pcb_entry R12;
+alias c_pcb_entry R11;
+alias c_PTBR R10;
+alias curr R9;
+alias p_userPgArea R8;
+alias c_userPgArea R7;
+alias c_mem R6;
+alias p_mem R5;
+
+p_pid = [SYSTEM_STATUS_TABLE + 1];
+p_pcb_entry = PROCESS_TABLE + p_pid * 16;
+
+
+[p_pcb_entry + 9] = 8; // MODE FLAG
+[p_pcb_entry + 13] = SP;
+userSp = SP;
+SP = [p_pcb_entry + 11]* 512 + [p_pcb_entry + 12];
+
+// GET PCB ENTRY
+multipush(R15,R14,R13,R12,R11);
+
+R1 = GET_PCB_ENTRY;
+call PROCESS_MANAGER;
+
+multipop(R15,R14,R13,R12,R11);
+
+c_pid = R0;
+if(R0 == -1) then 
+    [[PTBR + ((userSp - 1) / 512) * 2] * 512 + (userSp - 1) % 512] = -1;
+    SP = userSp;
+    [p_pcb_entry + 9] = 0;
+    ireturn;
+endif;
+
+
+if([PTBR + 4] == -1) then 
+    multipush(R15, R14, R13, R12, R11);
+    R1 = GET_FREE_PAGE;
+    call MEMORY_MANAGER;
+    
+    [PTBR + 4] = R0;
+    [PTBR + 5] = "0110";
+
+    R1 = GET_FREE_PAGE;
+    call MEMORY_MANAGER;
+
+    [PTBR + 6] = R0;
+    [PTBR + 7] = "0110";
+
+    multipop(R15, R14, R13, R12, R11);
+endif;
+
+c_PTBR = PAGE_TABLE_BASE + c_pid * 20;
+
+multipush(R15, R14, R13, R12, R11,R10); 
+
+R1 = GET_FREE_PAGE;
+call MEMORY_MANAGER;     
+
+multipop(R15, R14, R13, R12, R11,R10);
+
+[c_PTBR + 16] = R0;
+[c_PTBR + 17] = "0110";
+
+multipush(R15, R14, R13, R12, R11, R10); 
+
+R1 = GET_FREE_PAGE;
+call MEMORY_MANAGER;
+
+multipop(R15, R14, R13, R12, R11, R10);
+
+[c_PTBR + 18] = R0;
+[c_PTBR + 19] = "0110";
+
+// initializing pcb for child;
+c_pcb_entry = PROCESS_TABLE + c_pid * 16;
+[c_pcb_entry + 3] = [p_pcb_entry + 3]; // user_id
+[c_pcb_entry + 6] = [p_pcb_entry + 6]; // swap_flag
+[c_pcb_entry + 10] = [p_pcb_entry + 10]; // user_area_swap_status
+[c_pcb_entry + 7] = [p_pcb_entry + 7]; // inode_index
+[c_pcb_entry + 13] = [p_pcb_entry + 13]; //user sp 
+[c_pcb_entry + 9] = 0; // MODE_FLAG
+[c_pcb_entry] = 0; // tick_field
+[c_pcb_entry + 12] = 0; //KPTR
+[c_pcb_entry + 1] = c_pid;
+[c_pcb_entry + 2] = p_pid;
+[c_pcb_entry + 14] = c_PTBR;
+[c_pcb_entry + 15] = PTLR;
+
+    // getting user Area page
+    
+    multipush(R15, R14, R13, R12, R11, R10); 
+    R1 = GET_FREE_PAGE;
+    call MEMORY_MANAGER;
+    multipop(R15, R14, R13, R12, R11, R10);
+
+[c_pcb_entry + 11] = R0;
+[c_pcb_entry + 4] = CREATED;
+
+p_userPgArea = [p_pcb_entry + 11];
+c_userPgArea = [c_pcb_entry + 11];
+
+// copying per process resource table
+curr = 0;
+while(curr < 8) do
+   [c_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2] = [p_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2];
+   [c_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2 + 1] = [p_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2 + 1];
+   if([c_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2] == 1) then 
+        [SEMAPHORE_TABLE + [c_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2 + 1] * 4 + 1] = [SEMAPHORE_TABLE + [c_userPgArea * 512 + RESOURCE_TABLE_OFFSET + curr * 2 + 1] *4 + 1] + 1;  
+   endif;
+   curr = curr + 1;
+endwhile;
+
+//copying disk_map_table
+curr = 0;
+
+while(curr < 10) do
+    [DISK_MAP_TABLE + c_pid * 10 + curr] = -1;
+    if(curr >= 2 && curr < 8) then
+        [DISK_MAP_TABLE + c_pid * 10 + curr] = [DISK_MAP_TABLE + p_pid * 10 + curr];
+    endif;
+    curr = curr + 1;
+endwhile;
+
+// page table initialization
+curr = 0;
+while(curr < 16) do
+    [c_PTBR + curr] = [PTBR + curr];
+    if(curr % 2 == 0 && [PTBR + curr] != -1) then
+        [MEMORY_FREE_LIST + [PTBR + curr]] = [MEMORY_FREE_LIST + [PTBR + curr]] + 1;
+    endif;
+    curr = curr + 1;
+endwhile;
+breakpoint;
+
+//coping stack pages 
+curr = 0;
+c_mem = [c_PTBR + 16] * 512;
+p_mem = [PTBR + 16] * 512;
+while(curr < 512) do 
+    [c_mem + curr] = [p_mem + curr];
+    curr = curr + 1;
+endwhile;
+
+curr = 0;
+c_mem = [c_PTBR + 18] * 512;
+p_mem = [PTBR + 18] * 512;
+while(curr < 512) do 
+    [c_mem + curr] = [p_mem + curr];
+    curr = curr + 1;
+endwhile;
+
+//storing BP in top of the kernel stack
+[[c_pcb_entry + 11] * 512 + [c_pcb_entry + 12]] = BP;
+
+// returning to child and parent
+[[PTBR + ((userSp - 1) / 512) * 2] * 512 + (userSp - 1) % 512] = c_pid;
+[[c_PTBR + ((userSp - 1) / 512) * 2] * 512 + (userSp - 1) % 512] = 0;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+SP = [p_pcb_entry + 13];
+ireturn;

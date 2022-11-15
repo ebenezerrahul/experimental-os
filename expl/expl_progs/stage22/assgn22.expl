@@ -1,0 +1,85 @@
+type 
+word {
+    int number;
+}
+endtype
+
+
+decl
+    int fork();
+enddecl
+
+int fork() {
+    decl
+        int retVal;
+    enddecl
+    begin
+        retVal = exposcall("Fork");
+        return retVal;
+    end
+}
+
+int main() {
+    decl
+        word shared, emp;
+        int i, semDec,rt, rc, temp, count,lock;
+    enddecl
+    begin
+        write("HEllo");
+        temp = initialize();
+        shared = alloc();
+        emp = alloc();
+        shared.number = -1;
+        emp.number = -1;
+        count = 100;
+        semDec = exposcall("Semget");
+        write("Semget");
+        write(semDec);
+        rt = 0;
+        rc = fork();
+        temp = -1;
+        if(rc == 0) then 
+            i = 2;
+            while(i <= 100) do
+                lock = exposcall("SemLock", semDec);
+                if(shared.number == emp.number) then 
+                    shared.number = i;
+                    i = i + 2;
+                endif;
+                lock = exposcall("SemUnLock", semDec);
+            endwhile;
+            rt = 1;
+            rc = 1;
+        endif;
+
+        if(rt == 0) then 
+            rc = fork();
+        endif;
+
+        if((rc + rt) == 0) then 
+            i = 1;
+            while(i <= 100) do
+                lock = exposcall("SemLock", semDec);
+                if(shared.number == emp.number) then 
+                    shared.number = i;
+                    i = i + 2;
+                endif;
+                lock = exposcall("SemUnLock", semDec);
+            endwhile;
+            rt = 1;
+        endif;
+        if(rt == 0) then
+            while(count > 0) do
+                lock = exposcall("SemLock", semDec);
+                if(shared.number != emp.number) then
+                    count = count - 1;
+                    write(shared.number);
+                    shared.number = emp.number;
+                endif;
+                lock = exposcall("SemUnLock", semDec);
+            endwhile;
+        endif;
+
+    return 0;
+    end
+}

@@ -1,0 +1,86 @@
+alias function_num R1;
+alias curr_pid R2;
+
+if (function_num == ACQUIRE_TERMINAL) then
+    while([TERMINAL_STATUS_TABLE] != 0) do 
+        [PROCESS_TABLE + curr_pid * 16 + 4] = WAIT_TERMINAL;
+        multipush(R1,R2,R3);
+        call SCHEDULER;
+        multipop(R1,R2,R3);
+    endwhile;
+    [TERMINAL_STATUS_TABLE] = 1;
+    [TERMINAL_STATUS_TABLE + 1] = curr_pid;
+endif;
+
+
+if(function_num == RELEASE_TERMINAL) then 
+    if(curr_pid != [TERMINAL_STATUS_TABLE + 1]) then 
+       R0 = -1;
+       return;
+    endif;
+
+    [TERMINAL_STATUS_TABLE] = 0;
+    alias curr R4;
+
+    curr = 1;
+    
+    while(curr < MAX_PROC_NUM) do 
+        if([PROCESS_TABLE + curr * 16 + 4] == WAIT_TERMINAL) then
+            [PROCESS_TABLE + curr * 16 + 4] = READY;
+        endif;
+        curr = curr + 1;
+    endwhile;
+    R0 = 0;
+endif;
+
+if (function_num == ACQUIRE_DISK) then 
+    while([DISK_STATUS_TABLE] == 1) do
+        [PROCESS_TABLE + curr_pid * 16 + 4] = WAIT_DISK;
+        backup;
+        call SCHEDULER;
+        restore;
+    endwhile;
+    [DISK_STATUS_TABLE] = 1;
+    [DISK_STATUS_TABLE + 4] = curr_pid;
+endif;
+
+if(function_num == ACQUIRE_SEMAPHORE) then 
+    alias curr R4;
+    curr = 0;
+    while(curr < MAX_SEM_COUNT) do 
+        if([SEMAPHORE_TABLE + curr * 4 + 1] == 0) then 
+            break;
+        endif;
+        curr = curr + 1;
+    endwhile;
+    if(curr == MAX_SEM_COUNT) then 
+        R0 = -1;
+    else 
+        [SEMAPHORE_TABLE + curr * 4 + 1] = 1;
+        [SEMAPHORE_TABLE + curr * 4] = -1;
+        R0 = curr;
+    endif;
+endif;
+
+if(function_num == RELEASE_SEMAPHORE) then 
+    alias sem_entry R2;
+    
+    if([SEMAPHORE_TABLE + sem_entry * 4] == R3) then 
+        [SEMAPHORE_TABLE + sem_entry + 4] = -1;
+        alias curr R4;
+        curr = 0;
+        while(curr < MAX_PROC_NUM) do 
+            if([PROCESS_TABLE + curr * 16 + 4] == WAIT_SEMAPHORE && [PROCESS_TABLE + curr * 16 + 5] == sem_entry) then 
+                [PROCESS_TABLE + curr * 16 + 4] = READY;
+                [PROCESS_TABLE + curr * 16 + 5] = "";
+            endif;
+            curr = curr + 1;
+        endwhile;
+    endif;
+
+    [SEMAPHORE_TABLE + sem_entry * 4 + 1] = [SEMAPHORE_TABLE + sem_entry * 4 + 1] - 1;
+
+endif;
+
+breakpoint;
+return;

@@ -1,0 +1,72 @@
+alias sys_call R15;
+alias userSp R14;
+alias pid R13;
+alias p_pid R12;
+alias proccess_entry R11;
+alias pid_wait R10;
+alias ret_val R9;
+alias curr R8;
+alias userAreapg R7;
+alias semdescr R6;
+alias sem_id R5;
+breakpoint;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+[proccess_entry + 13] = SP;
+userSp = [proccess_entry + 13];
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+sys_call = [[PTBR + 2 * ((userSp - 5)/ 512)] * 512 + (userSp - 5) % 512];
+ret_val = [PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512;
+userAreapg = [proccess_entry + 11] * 512;
+
+if(sys_call == INT_SEMLOCK) then 
+    
+    [proccess_entry + 9] = INT_SEMLOCK;
+    semdescr = [[PTBR + 2 * ((userSp - 4) / 512)] * 512 + (userSp - 4) % 512];
+    if(semdescr < 0 || semdescr >= 8 || [RESOURCE_TABLE_OFFSET + userAreapg + semdescr * 2] != 1) then 
+        [ret_val] = -1;
+    else 
+       sem_id = [RESOURCE_TABLE_OFFSET + userAreapg + semdescr * 2 + 1];
+       while([SEMAPHORE_TABLE + sem_id * 4] != -1) do 
+            [proccess_entry + 4] = WAIT_SEMAPHORE;
+            [proccess_entry + 5] = sem_id;
+            backup;
+            call SCHEDULER;
+            restore;
+       endwhile;
+       [SEMAPHORE_TABLE + sem_id * 4] = pid;
+       [proccess_entry + 9] = 0;
+       [ret_val] = 0;
+    endif;
+endif;
+
+if(sys_call == INT_SEMUNLOCK) then 
+    
+    [proccess_entry + 9] = INT_SEMUNLOCK;
+    semdescr = [[PTBR + 2 * ((userSp - 4) / 512)] * 512 + (userSp - 4) % 512];
+    if(semdescr < 0 || semdescr >= 8 || [RESOURCE_TABLE_OFFSET + userAreapg + semdescr * 2] != 1) then 
+        [ret_val] = -1;
+    else 
+        sem_id = [RESOURCE_TABLE_OFFSET + userAreapg + semdescr * 2 + 1];
+        if([SEMAPHORE_TABLE + sem_id * 4] == pid) then
+            [SEMAPHORE_TABLE + sem_id * 4] = -1;
+            curr = 0;
+            while(curr < MAX_PROC_NUM) do 
+                if([PROCESS_TABLE + curr * 16 + 4] == WAIT_SEMAPHORE && [PROCESS_TABLE + curr * 16 + 5] == sem_id) then 
+                    [PROCESS_TABLE + curr * 16 + 4] = READY;
+                    [PROCESS_TABLE + curr * 16 + 5] = "";
+                endif;
+                curr = curr + 1;
+            endwhile;
+            [ret_val] = 0;
+        else 
+            [ret_val] = -2;
+        endif;
+    endif;
+endif;
+
+
+SP = [proccess_entry + 13];
+ireturn;

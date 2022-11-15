@@ -1,0 +1,75 @@
+alias sys_call R15;
+alias userSp R14;
+alias pid R13;
+alias p_pid R12;
+alias proccess_entry R11;
+alias pid_wait R10;
+alias ret_val R9;
+alias curr R8;
+alias userAreapg R7;
+alias semdescr R6;
+breakpoint;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+[proccess_entry + 13] = SP;
+userSp = [proccess_entry + 13];
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+sys_call = [[PTBR + 2 * ((userSp - 5)/ 512)] * 512 + (userSp - 5) % 512];
+ret_val = [PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512;
+userAreapg = [proccess_entry + 11] * 512;
+
+if(sys_call == INT_SEMGET) then 
+    
+    [proccess_entry + 9] = INT_SEMGET;
+
+    curr = 0;
+
+    while([userAreapg + RESOURCE_TABLE_OFFSET + curr] != -1 && curr < 16) do 
+        curr = curr + 2;
+    endwhile;
+
+    if(curr == 16) then 
+        [ret_val] = -1;
+    else 
+        multipush(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6);
+        R1 = ACQUIRE_SEMAPHORE;
+        R2 = pid;
+        call RESOURCE_MANAGER;
+        multipop(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6);
+        if(R0 == -1)  then 
+            [ret_val] = -2;
+        else 
+        [curr + RESOURCE_TABLE_OFFSET + userAreapg] = 1;
+        [curr + 1 + RESOURCE_TABLE_OFFSET + userAreapg] = R0;
+        [ret_val] = curr / 2;
+        endif;
+    endif;
+
+    [proccess_entry + 9] = 0;
+endif;
+
+if(sys_call == INT_SEMRELEASE) then 
+    
+    [proccess_entry + 9] = INT_SEMRELEASE;
+    semdescr = [[PTBR + 2 * ((userSp - 4) / 512)] * 512 + (userSp - 4) % 512];
+    if(semdescr < 0 || semdescr >= 8 || [RESOURCE_TABLE_OFFSET + userAreapg + semdescr * 2] != 1) then 
+        [ret_val] = -1;
+    else 
+        multipush(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6);
+        R1 = RELEASE_SEMAPHORE;
+        R2 = [RESOURCE_TABLE_OFFSET + userAreapg + semdescr *2 + 1];
+        R3 = pid;
+        call RESOURCE_MANAGER;
+        multipop(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6);
+        [ret_val] = 0;
+        [RESOURCE_TABLE_OFFSET + userAreapg + semdescr * 2] = -1;
+        [proccess_entry + 9] = 0;
+    endif;
+
+endif;
+
+
+SP = [proccess_entry + 13];
+ireturn;

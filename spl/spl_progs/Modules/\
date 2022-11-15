@@ -1,0 +1,37 @@
+alias sys_call R15;
+alias userSp R14;
+alias pid R13;
+alias p_pid R12;
+alias proccess_entry R11;
+alias pid_wait R10;
+alias ret_val R9;
+alias curr R8;
+alias userAreapg R7;
+breakpoint;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+[proccess_entry + 13] = SP;
+[proccess_entry + 9] = 17;
+userSp = [proccess_entry + 13];
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+sys_call = [[PTBR + 2 * ((userSp - 5)/ 512)] * 512 + (userSp - 5) % 512];
+
+
+if(sys_call == 17) then 
+    
+    userAreapg = [PROCESS_TABLE + 11] * 512;
+    curr = 0;
+    while([userAreapg + RESOURCE_TABLE_OFFSET + curr] != -1) do 
+        curr = curr + 2;
+    endwhile;
+    if(curr == 16) then 
+        ret_val = -1;
+    endif;
+
+endif;
+
+
+SP = [proccess_entry + 13];
+ireturn;

@@ -1,9 +1,12 @@
-../spl/spl_progs/Modules/st18_Resource_manager.spl
-../spl/spl_progs/Modules/st21_Process_manager.spl
+../spl/spl_progs/Modules/stage22_Resource_Manager.spl
+../spl/spl_progs/Modules/stage_22_int_14.spl
+../spl/spl_progs/Modules/stage_22_int_13.spl
+../spl/spl_progs/Modules/stage_22_fork.spl
+../spl/spl_progs/Modules/stage22_Process_manager.spl
 ../spl/spl_progs/Modules/st19_Memory_manager.spl
 ../spl/spl_progs/Modules/st18_Device_Manager.spl
 ../spl/spl_progs/Modules/stage20_scheduler.spl
-../spl/spl_progs/Modules/st21_boot_module.spl
+../spl/spl_progs/Modules/st22_boot_module.spl
 ../spl/spl_progs/Modules/st21_int11.spl
 ../spl/spl_progs/Modules/st21_shutdown.spl
 ../spl/spl_progs/Modules/newTimer.spl
