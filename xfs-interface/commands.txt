@@ -28,3 +28,7 @@ load --exec ../expl/expl_progs/st21/assgn.xsm
 load --exec ../expl/expl_progs/st21/getpid.xsm
 load --exec ../expl/expl_progs/st21/assgnsyn.xsm
 load --exec ../expl/expl_progs/stage22/assgn22.xsm
+load --exec ../expl/expl_progs/stage22/assgnb.xsm
+load --exec ../expl/expl_progs/stage22/child.xsm
+load --exec ../expl/expl_progs/stage22/mergesq.xsm
+load --exec ../expl/expl_progs/stage22/mergecon.xsm
