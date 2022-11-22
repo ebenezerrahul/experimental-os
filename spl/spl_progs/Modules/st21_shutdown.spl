@@ -1,1 +1,52 @@
+alias pid R15;
+alias proccess_entry R14;
+alias ret_addr R13;
+alias userSp R12;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+
+userSp = SP;
+[proccess_entry + 13] = SP; 
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+[proccess_entry + 9] = INT_SHUTDOWN; 
+
+
+
+ret_addr = [PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512;
+
+if(pid != 1 || [proccess_entry + 3] != 1) then 
+    print pid;
+    print [proccess_entry + 3];
+    [ret_addr] = -1;
+    [proccess_entry + 9] = 0;
+    SP = userSp;
+    ireturn;
+endif;
+
+backup;
+R1 = DISK_STORE;
+R2 = pid;
+R3 = 59;
+R4 = 3;
+call DEVICE_MANAGER;
+restore;
+
+
+backup;
+R1 = DISK_STORE;
+R2 = pid;
+R3 = 60;
+R4 = 4;
+call DEVICE_MANAGER;
+restore;
+
+
+backup;
+R1 = DISK_STORE;
+R2 = pid;
+R3 = 62;
+R4 = 5;
+call DEVICE_MANAGER;
+restore;
 halt;

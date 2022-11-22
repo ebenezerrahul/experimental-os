@@ -9,11 +9,9 @@ if(function_num == DISK_LOAD) then
     R2 = currPid;
     call RESOURCE_MANAGER;
     multipop(R1,R2,R3, R4);
-    [DISK_STATUS_TABLE] = 0;
     [DISK_STATUS_TABLE + 1] = 0;// indicating load
     [DISK_STATUS_TABLE + 2] = pageNum;
     [DISK_STATUS_TABLE + 3] = blockNum;
-    [DISK_STATUS_TABLE + 4] = currPid;
     load(pageNum, blockNum);
     [PROCESS_TABLE + currPid * 16 + 4] = WAIT_DISK;
     backup;

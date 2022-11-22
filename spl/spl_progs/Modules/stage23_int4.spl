@@ -1,0 +1,195 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = INT_CREATE;
+
+alias pid R15;
+alias proccess_entry R14;
+alias userSp R13;
+alias curr R12;
+alias ret_val R11;
+alias ret_addr R10;
+alias filename R9;
+alias permision R8;
+alias free_entry R7;
+alias inode_entry R6;
+alias root_entry R5;
+alias sys_call R4;
+alias i R3;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+
+[proccess_entry + 13] = SP;
+userSp = SP;
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+ret_addr =   [PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512;
+sys_call =  [[PTBR + 2 * ((userSp - 5) / 512)] * 512 + (userSp - 5) % 512];
+filename  = [[PTBR + 2 * ((userSp - 4) / 512)] * 512 + (userSp - 4) % 512];
+
+if(sys_call == INT_DELETE) then 
+    [proccess_entry + 9] = INT_DELETE;
+    
+    while(curr < MAX_FILE_NUM) do
+        // file is present
+        if([INODE_TABLE + curr * 16 + 1] == filename) then
+            break;
+        endif;
+        curr = curr + 1;
+    endwhile;
+    
+    //file not found
+    if(curr == MAX_FILE_NUM) then 
+        [ret_addr] = 0;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+
+    //file found
+
+    // checking for permision to delete
+
+    inode_entry = INODE_TABLE + curr * 16;
+    
+    // not a data file
+    if([inode_entry] != DATA) then 
+        [ret_addr] = -1;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+
+    // no permision
+    if([inode_entry + 4] == 0 && [proccess_entry + 3] != 1 && [proccess_entry + 3] != [inode_entry + 3]) then 
+        [ret_addr] = -1;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+
+    backup;
+    R1 = ACQUIRE_INODE;
+    R2 = curr;
+    R3 = pid;
+    call RESOURCE_MANAGER;
+    restore;
+    
+    if(R0 == -1) then
+        [proccess_entry + 9] = 0;
+        [ret_addr] = 0;
+        SP = userSp;
+        ireturn;
+    endif;
+    
+
+    //checking weather file is open or not 
+
+    //if open can't be deleted
+    if([FILE_STATUS_TABLE + 4 * curr + 1] != -1) then 
+        backup;
+        R1 = RELEASE_INODE;
+        R2 = curr;
+        R3 = pid;
+        restore;
+        [ret_addr] = -2;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+
+    while(i >= 8 && i < 12) do 
+        if([BUFFER_TABLE + ([inode_entry + i] % MAX_BUFFER) * 4] == [inode_entry + i]) then 
+            [BUFFER_TABLE + ([inode_entry + i] % MAX_BUFFER) * 4] = 0;
+        endif;
+        backup;
+        R1 = RELEASE_BLOCK;
+        R2 = [inode_entry + i];
+        R3 = pid;
+        call RELEASE_BLOCK;
+        restore;
+        i = i + 1;
+    endwhile;
+    
+    // invalidating inode entry and root file entry
+    [inode_entry + 1] = -1;
+    [ROOT_FILE + curr * 8] = -1;
+
+    backup;
+    R1 = RELEASE_INODE;
+    R2 = curr;
+    R3 = pid;
+    restore;
+    
+    [ret_addr] = 0;
+    [proccess_entry + 9] = 0;
+    SP = userSp;
+    ireturn;
+
+endif;
+
+
+if(sys_call == INT_CREATE) then 
+    
+    [proccess_entry + 9] = INT_CREATE;
+    permision = [[PTBR + 2 * ((userSp - 3) / 512)] * 512 + (userSp - 3) % 512];
+
+    breakpoint;
+    // checking weather file is present in the inode table and also checking for free entry
+    curr = 0;
+    free_entry = -1;
+
+    while(curr < MAX_FILE_NUM) do
+        // file is present
+        if([INODE_TABLE + curr * 16 + 1] == filename) then
+            [ret_addr] = 0;
+            [proccess_entry + 9] = 0;
+            SP = userSp;
+            ireturn;
+        endif;
+
+        if(free_entry == -1 && [INODE_TABLE + curr * 16 + 1] == -1) then 
+            free_entry = curr;
+        endif;
+
+        curr = curr + 1;
+    endwhile;
+
+    //if no free entry is found
+    if(free_entry == -1) then 
+        [ret_addr] = -1;
+        [proccess_entry + 9] = 0;
+        SP = userSp;
+        ireturn;
+    endif;
+
+    // free entry found 
+    // creating file in inode table 
+
+    curr = free_entry;
+
+    inode_entry = INODE_TABLE + curr * 16;
+    [inode_entry + 0] = DATA;
+    [inode_entry + 1] = filename;
+    [inode_entry + 2] = 0;
+    [inode_entry + 3] = [proccess_entry + 3];
+    [inode_entry + 4] = permision;
+    [inode_entry + 8] = -1;
+    [inode_entry + 9] = -1;
+    [inode_entry + 10] = -1;
+    [inode_entry + 11] = -1;
+
+    // now creating an entry in rootfile
+
+    root_entry = ROOT_FILE + 8 * curr;
+    [root_entry + 0] = filename;
+    [root_entry + 1] = 0;
+    [root_entry + 2] = DATA;
+    [root_entry + 3] = [USER_TABLE + [proccess_entry + 3] * 2];
+    [root_entry + 4] = permision;
+
+
+    [ret_addr] = 0;
+    [proccess_entry + 9] = 0;
+    SP = userSp;
+    breakpoint;
+    ireturn;
+endif;

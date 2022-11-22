@@ -1,0 +1,20 @@
+int main() {
+    decl
+        int temp, permission;
+        string fileName;
+    enddecl
+    begin
+        write("Enter fileName");
+        read(fileName);
+        write("set permission");
+        read(permission);
+
+        temp = exposcall("Delete", fileName, permission);
+        if(temp == 0) then 
+            write("Success");
+        else 
+            write("failed");
+        endif;
+        return 0;
+    end
+}
