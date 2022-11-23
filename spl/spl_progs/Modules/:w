@@ -1,0 +1,63 @@
+alias fun_num R1;
+
+if(fun_num == OPEN) then
+    alias filename R2;
+    alias curr R15;
+    alias inode_index R14;
+    alias open_file_inst R13;
+    curr = 0;
+    inode_index = -1;
+    while(curr < MAX_FILE_NUM) do
+        if([INODE_TABLE + curr * 16 + 1] == filename) then
+            inode_index = curr; 
+            break;
+        endif;
+        curr = curr + 1;
+    endwhile;
+    
+    if(inode_index == -1) then 
+        R0 = -1;
+        return;
+    endif;
+    
+    if([INODE_TABLE + curr * 16] == EXEC) then 
+        R0 = -1;
+        return;
+    endif;
+
+    backup;
+    R1 = ACQUIRE_INODE;
+    R2 = inode_index;
+    R3 = [SYSTEM_STATUS_TABLE + 1];
+    call RESOURCE_MANAGER;
+    restore;
+
+    if(R0 == -1) then 
+        R0 = -1;
+        return ;
+    endif;
+    
+    curr = 0;
+    open_file_inst = -1;
+    while(curr < MAX_OPENFILE_NUM) do 
+        if([OPEN_FILE_TABLE + curr * 4] == -1) then
+            open_file_inst = curr;
+            break;
+        endif;
+        curr = curr + 1;
+    endwhile;
+    
+    if(open_file_inst == -1) then 
+        
+        backup;
+        R1 = ACQUIRE_INODE;
+        R2 = inode_index;
+        R3 = [SYSTEM_STATUS_TABLE + 1];
+        call RESOURCE_MANAGER;
+        restore;
+    endif;
+
+
+    
+
+endif;

@@ -1,0 +1,143 @@
+alias pid R15;
+alias proccess_entry R14;
+alias userSp R13;
+alias filedesc R12;
+alias word_vir_addr R11;
+alias word_addr R10;
+alias ret_addr R9;
+alias userAreaPg R8;
+alias perProcTable R7;
+alias open_file_inst R6;
+alias inode_index R5;
+alias lseek R4;
+alias filesize R3;
+
+breakpoint;
+userSp = SP;
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+[proccess_entry + 9] = INT_READ;
+
+[proccess_entry + 13] = SP;
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+filedesc = [[PTBR + 2 * ((userSp - 4) / 512)] * 512 + (userSp - 4) % 512];
+
+
+ret_addr = [PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512;
+word_vir_addr = [[PTBR + 2 * ((userSp - 3) / 512)] * 512 + (userSp - 3) % 512];
+
+word_addr = [PTBR + 2 * ((word_vir_addr) / 512) ] * 512 + word_vir_addr % 512;
+
+if(filedesc == -1) then 
+    backup;
+    R1 = TERMINAL_READ;
+    R2 = pid;
+    R3 = word_vir_addr;
+    call DEVICE_MANAGER;
+    restore;
+    [ret_addr] = 0;
+    SP = userSp;
+    [proccess_entry + 9] = 0;
+    ireturn;
+else 
+    if(filedesc < 0 || filedesc >= 8) then 
+        [ret_addr] = -1;
+        [word_addr] = -1;
+        [proccess_entry + 9] = 0;
+        SP = userSp;
+        ireturn;
+    endif;
+    
+    userAreaPg = [proccess_entry + 11];
+    perProcTable = userAreaPg * 512 + RESOURCE_TABLE_OFFSET;
+
+    if([perProcTable + filedesc * 2] != FILE) then 
+        [ret_addr] = -1;
+        [proccess_entry + 9] = 0;
+        SP = userSp;
+        ireturn;
+    endif;
+    
+    open_file_inst = [perProcTable + filedesc * 2 + 1];
+    inode_index = [OPEN_FILE_TABLE + 4 * open_file_inst];
+    
+    multipush(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6,R5,R4,R3,R2,R1);
+    R1 = ACQUIRE_INODE;
+    R2 = inode_index;
+    R3 = pid;
+    call RESOURCE_MANAGER;
+    multipush(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6,R5,R4,R3,R2,R1);
+
+    if(R0 == -1) then 
+        [ret_addr] = -1;
+        [word_addr] = -1;
+        [proccess_entry + 9] = 0;
+        SP = userSp;
+        ireturn;
+    endif;
+
+    lseek = [OPEN_FILE_TABLE + 4 * open_file_inst + 3]; 
+
+    if([INODE_TABLE + inode_index * 16 + 1] == "root") then 
+        if(lseek >= 480) then 
+            backup;
+            R1 = RELEASE_INODE;
+            R2 = inode_index;
+            R3 = pid;
+            call RESOURCE_MANAGER;
+            restore;
+            
+            [ret_addr] = -2;
+            [word_addr] = -1;
+            [proccess_entry + 9] = 0;
+            SP = userSp;
+            ireturn;
+        endif;
+
+        [word_addr] = [ROOT_FILE + lseek];
+        lseek = lseek + 1;
+
+    else
+        filesize = [INODE_TABLE + inode_index * 16 + 2];
+        if(lseek >= filesize) then 
+            backup;
+            R1 = RELEASE_INODE;
+            R2 = inode_index;
+            R3 = pid;
+            call RESOURCE_MANAGER;
+            restore;
+            
+            [ret_addr] = -2;
+            [word_addr] = -1;
+            [proccess_entry + 9] = 0;
+            SP = userSp;
+            ireturn;
+        endif;
+        
+
+        backup;
+        R1 = BUFFERED_READ;
+        R2 = [INODE_TABLE + inode_index * 16  + 8 + (lseek / 512)];
+        R3 = lseek % 512;
+        R4 = word_addr; 
+        call FILE_MANAGER;
+        restore;
+        
+        lseek = lseek + 1;
+    endif;
+    
+    [OPEN_FILE_TABLE + 4 * open_file_inst + 3] = lseek; 
+    backup;
+    R1 = RELEASE_INODE;
+    R2 = inode_index;
+    R3 = pid;
+    call RESOURCE_MANAGER;
+    restore;
+    
+    [ret_addr] = 0;
+    SP = userSp;
+    [proccess_entry + 9] = 0;
+    ireturn;
+endif;
+

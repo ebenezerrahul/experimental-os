@@ -38,6 +38,7 @@ if(function_num == DISK_LOAD) then
     backup;
     call SCHEDULER;
     restore;
+    return;
 endif;
 
 
@@ -60,20 +61,25 @@ if(function_num == TERMINAL_WRITE) then
 endif;
 
 if(function_num == TERMINAL_READ) then
+    alias currPid R2;
+
     multipush(R1,R2,R3);
     R1 = ACQUIRE_TERMINAL;
     R2 = currPid;
     call RESOURCE_MANAGER;
     multipop(R1,R2,R3);
+
     read;
     [PROCESS_TABLE + currPid * 16 + 4] = WAIT_TERMINAL;
+
     multipush(R1,R2,R3);
     call SCHEDULER;
     multipop(R1,R2,R3);
-    alias wordAddr R3;
-    [[PTBR + (wordAddr / 512) * 2]*512 + (wordAddr) % 512] = [PROCESS_TABLE + currPid * 16 + 8];
-    //[wordAddr] = [PROCESS_TABLE + currPid * 16 + 8];
 
+    alias wordAddr R3;
+    [[PTBR + (wordAddr / 512) * 2]*512 + (wordAddr) % 512] = [PROCESS_TABLE + R2 * 16 + 8];
+    //[wordAddr] = [PROCESS_TABLE + currPid * 16 + 8];
+    return;
 endif;
 
 breakpoint;

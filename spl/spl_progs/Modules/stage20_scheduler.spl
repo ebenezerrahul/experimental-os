@@ -3,6 +3,7 @@ alias currPrTableEntry R1;
 alias newPID R2;
 alias newPrTableEntry R3;
 
+breakpoint;
 
 currPID = [SYSTEM_STATUS_TABLE + 1];
 multipush(BP);
@@ -40,5 +41,6 @@ endif;
 [newPrTableEntry + 4] = RUNNING;
 [SYSTEM_STATUS_TABLE + 1] = newPID;
 multipop(BP);
+breakpoint;
 return;
 

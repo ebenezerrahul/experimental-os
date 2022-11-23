@@ -1,17 +1,19 @@
 load --library ../expl/library.lib
-load --module 0 ../spl/spl_progs/Modules/stage23_Resource_Manager.xsm
-load --module 1 ../spl/spl_progs/Modules/stage22_Process_manager.xsm
+load --module 0 ../spl/spl_progs/Modules/stage24_Resource_Manager.xsm
+load --module 1 ../spl/spl_progs/Modules/stage24_Process_manager.xsm
 load --module 2 ../spl/spl_progs/Modules/st19_Memory_manager.xsm
+load --module 3 ../spl/spl_progs/Modules/stage24_file_manager.xsm
 load --module 4 ../spl/spl_progs/Modules/st23_Device_Manager.xsm
 load --module 5 ../spl/spl_progs/Modules/stage20_scheduler.xsm
-load --module 7 ../spl/spl_progs/Modules/st23_boot_module.xsm
+load --module 7 ../spl/spl_progs/Modules/st24_boot_module.xsm
 load --int=timer ../spl/spl_progs/Modules/newTimer.xsm
 load --int=console ../spl/spl_progs/Modules/st16_console_int.xsm
 load --int=disk ../spl/spl_progs/Modules/st18_disk_int.xsm
-load --int=6 ../spl/spl_progs/Modules/st_16_int_6.xsm
+load --int=6 ../spl/spl_progs/Modules/stage24_int6.xsm
 load --int=7 ../spl/spl_progs/Modules/st15_int7.xsm
-load --int=8 ../spl/spl_progs/Modules/stage_22_fork.xsm
+load --int=8 ../spl/spl_progs/Modules/stage_24_fork.xsm
 load --int=4 ../spl/spl_progs/Modules/stage23_int4.xsm
+load --int=5 ../spl/spl_progs/Modules/stage24_int5.xsm
 load --int=9 ../spl/spl_progs/Modules/st19_int9.xsm
 load --int=10 ../spl/spl_progs/Modules/stage20_exit_int10.xsm
 load --int=11 ../spl/spl_progs/Modules/st21_int11.xsm
@@ -35,3 +37,6 @@ load --exec ../expl/expl_progs/stage22/mergesq.xsm
 load --exec ../expl/expl_progs/stage22/mergecon.xsm
 load --exec ../expl/expl_progs/stage23/touch.xsm
 load --exec ../expl/expl_progs/stage23/rm.xsm
+load --exec ../expl/expl_progs/stage24/read.xsm
+load --data ../rahul.dat
+load --data ../numbers.dat

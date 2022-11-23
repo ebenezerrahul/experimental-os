@@ -1,0 +1,92 @@
+alias pid R15;
+alias proccess_entry R14;
+alias userSp R13;
+alias curr R12;
+alias ret_val R11;
+alias ret_addr R10;
+alias filename R9;
+alias userAreaPg R8;
+alias perProcTable R7;
+alias freedecr R6;
+alias open_file R5;
+alias sys_call R4;
+alias i R3;
+
+pid = [SYSTEM_STATUS_TABLE + 1];
+proccess_entry = PROCESS_TABLE + pid * 16;
+
+[proccess_entry + 13] = SP;
+userSp = SP;
+SP = [proccess_entry + 11] * 512 + [proccess_entry + 12];
+
+ret_addr =   [PTBR + 2 * ((userSp - 1) / 512)] * 512 + (userSp - 1) % 512;
+sys_call =  [[PTBR + 2 * ((userSp - 5) / 512)] * 512 + (userSp - 5) % 512];
+filename  = [[PTBR + 2 * ((userSp - 4) / 512)] * 512 + (userSp - 4) % 512];
+
+if(sys_call == INT_OPEN) then 
+    [proccess_entry + 9] = INT_OPEN;
+    userAreaPg = [proccess_entry + 11];
+    perProcTable = userAreaPg * 512 + RESOURCE_TABLE_OFFSET;
+    curr = 0;
+    while(curr < 8) do
+        if([perProcTable + curr*2] == -1) then 
+            break;
+        endif;
+        curr = curr + 1;
+    endwhile;
+
+    freedecr = curr;
+    if(freedecr == 8) then 
+        [ret_addr] = -3;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+    multipush(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6,R5,R4,R3,R2,R1);
+    R1 = OPEN;
+    R2 = filename;
+    call FILE_MANAGER;
+    multipop(R15,R14,R13,R12,R11,R10,R9,R8,R7,R6,R5,R4,R3,R2,R1);
+    
+    if(R0 == -1 || R0 == -2) then 
+        if(R0 == -1) then
+            [ret_addr] = -1;
+        else
+            [ret_addr] = -2;
+        endif;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+
+    [perProcTable + freedecr * 2] = FILE;
+    [perProcTable + freedecr * 2 + 1] = R0;
+    [ret_addr] = freedecr;
+    SP = userSp;
+    [proccess_entry + 9] = 0;
+    ireturn;
+
+endif;
+
+
+if(sys_call == INT_CLOSE) then 
+    [proccess_entry + 9] = INT_OPEN;
+    freedecr = filename;
+    perProcTable = userAreaPg * 512 + RESOURCE_TABLE_OFFSET;
+    if(freedecr < 0 || freedecr >=8 || [perProcTable + freedecr * 2] != FILE) then 
+        [ret_addr] = -1;
+        SP = userSp;
+        [proccess_entry + 9] = 0;
+        ireturn;
+    endif;
+    open_file = [perProcTable + freedecr * 2 + 1]; 
+    backup;
+    R1 = CLOSE;
+    R2 = open_file;
+    call FILE_MANAGER;
+    restore;
+    [ret_addr] = 0; 
+    [proccess_entry + 9] = 0;
+    SP = userSp;
+    ireturn;
+endif;
