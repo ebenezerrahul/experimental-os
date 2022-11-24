@@ -2,6 +2,9 @@
 loadi(63,13);
 loadi(64,14);
 
+//rootfile 
+loadi(62,5);
+
 //init
 loadi(65,7);
 loadi(66,8);

@@ -38,5 +38,6 @@ load --exec ../expl/expl_progs/stage22/mergecon.xsm
 load --exec ../expl/expl_progs/stage23/touch.xsm
 load --exec ../expl/expl_progs/stage23/rm.xsm
 load --exec ../expl/expl_progs/stage24/read.xsm
+load --exec ../expl/expl_progs/stage24/fread.xsm
 load --data ../rahul.dat
 load --data ../numbers.dat

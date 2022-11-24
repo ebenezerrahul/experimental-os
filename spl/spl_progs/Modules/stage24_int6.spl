@@ -97,7 +97,6 @@ else
 
         [word_addr] = [ROOT_FILE + lseek];
         lseek = lseek + 1;
-
     else
         filesize = [INODE_TABLE + inode_index * 16 + 2];
         if(lseek >= filesize) then 
