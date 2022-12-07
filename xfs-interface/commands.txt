@@ -41,3 +41,5 @@ load --exec ../expl/expl_progs/stage24/read.xsm
 load --exec ../expl/expl_progs/stage24/fread.xsm
 load --data ../rahul.dat
 load --data ../numbers.dat
+load --data ../file1.dat
+load --data ../file2.dat

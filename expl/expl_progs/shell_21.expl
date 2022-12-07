@@ -21,6 +21,7 @@ int main(){
     begin
         command = "";
         while(command != "shutdown") do 
+            write("--ENTER--");
             read(command);
             if(command == "shutdown") then
                 break;
